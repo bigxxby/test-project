@@ -19,12 +19,10 @@ class UserController extends Controller
      */
     public function register(Request $request): JsonResponse
     {
-
-
         // Валидация данных запроса
         $validator = Validator::make($request->all(), [
             'login' => 'required|string|unique:users',
-            'email' => 'required|string|email:rfc,dns|unique:users', //TODO: как валидировать емейл? при //email:rfc,dns долгий запрос
+            'email' => 'required|string|email:rfc,dns|unique:users',
             'password' => 'required|string|min:8',
         ]);
 
@@ -64,15 +62,28 @@ class UserController extends Controller
             // Неверные учетные данные
             return response()->json(['error' => 'Unauthorized'], 401);
         }
+    }
 
+    public function logout(Request $request): JsonResponse
+    {
+        // Получаем текущего авторизованного пользователя
+        $user = Auth::guard('sanctum')->user();
+
+        if ($user) {
+            $user->tokens()->delete();
+        }
+
+        return response()->json(['message' => 'Successfully logged out']);
     }
 
 
-    public function whoami(Request $request): JsonResponse
+    public function show(Request $request): JsonResponse
     {
         $user = Auth::user();
 
+        $user->makeVisible(['email']);
         return response()->json(['user' => $user], 200);
     }
+
 
 }
