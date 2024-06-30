@@ -2,88 +2,93 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
-
-    /**
-     * Регистрация нового пользователя.
-     *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function register(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        // Валидация данных запроса
+        // Retrieve all users
+        $users = User::all();
+        return response()->json(['users' => $users], 200);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        // Validate incoming request
         $validator = Validator::make($request->all(), [
             'login' => 'required|string|unique:users',
             'email' => 'required|string|email:rfc,dns|unique:users',
             'password' => 'required|string|min:8',
         ]);
 
-        // Если валидация не прошла, возвращаем ошибку 400
         if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
+            return response()->json(['errors' => $validator->errors()], 400);
         }
 
-        // Создание пользователя, если валидация успешна
+        // Create new user
         $user = User::create([
             'login' => $request->login,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => Hash::make($request->password),
         ]);
 
-        // Возвращаем успешный ответ 201 с данными пользователя
-        return response()->json(['message' => 'User registered successfully', 'user' => $user], 201);
+        return response()->json(['message' => 'User created successfully', 'user' => $user], 201);
     }
 
-    public function login(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'login' => 'required|string',
-            'password' => 'required|string',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
-        }
-
-        if (Auth::attempt(['login' => $request->login, 'password' => $request->password])) {
-            // Аутентификация успешна
-            $user = Auth::user();
-            $token = $user->createToken('AuthToken')->plainTextToken;
-            return response()->json(['message' => 'Login successful', 'token' => $token, 'user' => $user], 200);
-        } else {
-            // Неверные учетные данные
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-    }
-
-    public function logout(Request $request): JsonResponse
-    {
-        // Получаем текущего авторизованного пользователя
-        $user = Auth::guard('sanctum')->user();
-
-        if ($user) {
-            $user->tokens()->delete();
-        }
-
-        return response()->json(['message' => 'Successfully logged out']);
-    }
-
-
-    public function show(Request $request): JsonResponse
+    public function show(): JsonResponse
     {
         $user = Auth::user();
-
         $user->makeVisible(['email']);
+        $user = UserResource::make($user);
         return response()->json(['user' => $user], 200);
     }
 
+    public function update(Request $request, $id): JsonResponse
+    {
+        // Validate incoming request
+        $validator = Validator::make($request->all(), [
+            'login' => 'string|unique:users',
+            'email' => 'string|email:rfc,dns|unique:users',
+            'password' => 'string|min:8',
+        ]);
 
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 400);
+        }
+
+        // Find user by ID and update
+        $user = User::findOrFail($id);
+
+        if ($request->has('login')) {
+            $user->login = $request->login;
+        }
+
+        if ($request->has('email')) {
+            $user->email = $request->email;
+        }
+
+        if ($request->has('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return response()->json(['message' => 'User updated successfully', 'user' => $user], 200);
+    }
+
+    public function destroy($id): JsonResponse
+    {
+        // Delete a user by ID
+        $user = User::findOrFail($id);
+        $user->delete();
+        return response()->json(['message' => 'User deleted successfully'], 200);
+    }
 }
+

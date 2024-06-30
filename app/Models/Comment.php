@@ -1,9 +1,10 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Comment extends Model
 {
@@ -15,18 +16,17 @@ class Comment extends Model
         'content',
     ];
 
-
-    public function post()
+    public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
     }
 
-    public function likes()
+    public function likes(): MorphMany
     {
         return $this->morphMany(Like::class, 'likeable');
     }
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }

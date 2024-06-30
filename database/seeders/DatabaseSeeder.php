@@ -1,7 +1,6 @@
 <?php
 
 namespace Database\Seeders;
-
 use Illuminate\Database\Seeder;
 use App\Models\Post;
 use App\Models\Comment;
@@ -11,6 +10,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+        // Ensure users are seeded first
+        $this->call(UsersTableSeeder::class);
+
         // Create 10 posts with comments and likes for each post
         Post::factory(10)->create()->each(function ($post) {
             // Create 5 comments for each post
@@ -26,3 +28,4 @@ class DatabaseSeeder extends Seeder
         });
     }
 }
+
